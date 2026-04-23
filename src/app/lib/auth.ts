@@ -46,6 +46,21 @@ export const testUsers: TestUser[] = [
 const AUTH_KEY = 'phishguard_auth';
 const USERS_KEY = 'phishguard_registered_users';
 const PROFILE_KEY = 'phishguard_current_user_profile';
+const PASSWORD_RESET_KEY = 'phishguard_password_resets';
+const ROLE_KEY = 'phishguard_role';
+
+export type UserRole = 'standard' | 'instructor' | 'admin';
+
+export type PasswordResetRequestResult =
+  | { ok: true; token: string; expiresAt: number }
+  | { ok: false; error: string };
+
+type StoredPasswordReset = {
+  token: string;
+  email: string;
+  expiresAt: number;
+  used: boolean;
+};
 
 // Log test credentials on load for easy reference
 if (typeof window !== 'undefined') {
@@ -207,6 +222,74 @@ export function mockLogout(): void {
   localStorage.removeItem(AUTH_KEY);
 }
 
+function getPasswordResets(): StoredPasswordReset[] {
+  return safeParseJson<StoredPasswordReset[]>(localStorage.getItem(PASSWORD_RESET_KEY)) ?? [];
+}
+
+function setPasswordResets(resets: StoredPasswordReset[]) {
+  localStorage.setItem(PASSWORD_RESET_KEY, JSON.stringify(resets));
+}
+
+export function requestPasswordReset(email: string): PasswordResetRequestResult {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail) return { ok: false, error: 'Email is required' };
+
+  // In a real app we would not reveal whether the email exists.
+  const exists =
+    testUsers.some((u) => u.email.toLowerCase() === normalizedEmail) ||
+    getRegisteredUsers().some((u) => u.email.toLowerCase() === normalizedEmail);
+
+  const token = genId();
+  const expiresAt = Date.now() + 60 * 60 * 1000; // 1 hour
+  const next: StoredPasswordReset = {
+    token,
+    email: normalizedEmail,
+    expiresAt,
+    used: false,
+  };
+
+  // Store regardless (prototype); consumer UI still shows generic success.
+  const all = [next, ...getPasswordResets()].slice(0, 25);
+  setPasswordResets(all);
+
+  if (!exists) {
+    // still return ok to mimic anti-enumeration behavior
+    return { ok: true, token, expiresAt };
+  }
+
+  return { ok: true, token, expiresAt };
+}
+
+export function resetPasswordWithToken(
+  token: string,
+  newPassword: string,
+): { ok: true } | { ok: false; error: string } {
+  const normalizedToken = token.trim();
+  if (!normalizedToken) return { ok: false, error: 'Invalid reset token' };
+  if (!newPassword) return { ok: false, error: 'Password is required' };
+
+  const resets = getPasswordResets();
+  const idx = resets.findIndex((r) => r.token === normalizedToken);
+  if (idx === -1) return { ok: false, error: 'Invalid reset token' };
+
+  const entry = resets[idx];
+  if (entry.used) return { ok: false, error: 'This reset link has already been used' };
+  if (Date.now() > entry.expiresAt) return { ok: false, error: 'This reset link has expired' };
+
+  // Update registered users only (test users stay fixed)
+  const users = getRegisteredUsers();
+  const uIdx = users.findIndex((u) => u.email.toLowerCase() === entry.email.toLowerCase());
+  if (uIdx !== -1) {
+    users[uIdx] = { ...users[uIdx], password: newPassword };
+    setRegisteredUsers(users);
+  }
+
+  resets[idx] = { ...entry, used: true };
+  setPasswordResets(resets);
+
+  return { ok: true };
+}
+
 /**
  * Get current user auth data
  */
@@ -223,4 +306,14 @@ export function getCurrentAuth() {
 
 export function getCurrentUserProfile(): CurrentUserProfile | null {
   return safeParseJson<CurrentUserProfile>(localStorage.getItem(PROFILE_KEY));
+}
+
+export function getCurrentUserRole(): UserRole {
+  const stored = localStorage.getItem(ROLE_KEY);
+  if (stored === 'admin' || stored === 'instructor' || stored === 'standard') return stored;
+  return 'standard';
+}
+
+export function setCurrentUserRole(role: UserRole) {
+  localStorage.setItem(ROLE_KEY, role);
 }

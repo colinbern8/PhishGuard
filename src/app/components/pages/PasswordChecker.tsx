@@ -51,11 +51,22 @@ export function PasswordChecker() {
     if (includeNumbers) chars += numbers;
     if (includeSymbols) chars += symbols;
     
+    const buf = new Uint32Array(length[0]);
+    crypto.getRandomValues(buf);
     let result = '';
-    for (let i = 0; i < length[0]; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    for (let i = 0; i < buf.length; i++) {
+      result += chars.charAt(buf[i] % chars.length);
     }
     setPassword(result);
+  };
+
+  const copyPassword = async () => {
+    if (!password) return;
+    try {
+      await navigator.clipboard.writeText(password);
+    } catch {
+      // ignore in prototype
+    }
   };
 
   return (
@@ -218,7 +229,7 @@ export function PasswordChecker() {
                     <code className="text-sm font-mono text-gray-900 dark:text-white">
                       {password}
                     </code>
-                    <Button size="sm" variant="ghost">
+                    <Button size="sm" variant="ghost" onClick={copyPassword}>
                       <Copy className="h-4 w-4" />
                     </Button>
                   </div>

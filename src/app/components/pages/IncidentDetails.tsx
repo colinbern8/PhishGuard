@@ -6,11 +6,13 @@ import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { listIncidentReports } from '../../lib/prototypeStorage';
 
 export function IncidentDetails() {
   const { incidentId } = useParams();
   const [hasConfirmed, setHasConfirmed] = useState(false);
-  const [upvoteCount, setUpvoteCount] = useState(45); // Initial count from the UI
+  const [upvoteCount, setUpvoteCount] = useState(45); // fallback
+  const incident = incidentId ? listIncidentReports().find((r) => r.id === incidentId) : null;
 
   // Check localStorage on mount
   useEffect(() => {
@@ -49,21 +51,25 @@ export function IncidentDetails() {
               <CardHeader>
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="destructive">HIGH RISK</Badge>
-                  <Badge className="bg-green-100 text-green-800 dark:bg-[#1E1E2E] dark:text-green-400">
-                    <Shield className="h-3 w-3 mr-1" />
-                    Verified by Admin
-                  </Badge>
+                  {incident?.verified ? (
+                    <Badge className="bg-green-100 text-green-800 dark:bg-[#1E1E2E] dark:text-green-400">
+                      <Shield className="h-3 w-3 mr-1" />
+                      Verified by Admin
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">Under Review</Badge>
+                  )}
                 </div>
                 <CardTitle className="text-gray-900 dark:text-white">
-                  Fake PayPal Security Alert Requesting Account Verification
+                  {incident?.context?.slice(0, 80) || 'Incident Details'}
                 </CardTitle>
                 <div className="flex items-center gap-4 mt-2">
                   <p className="text-sm text-gray-400 dark:text-gray-500">
-                    Report #12345 • Submitted February 16, 2026
+                    Report {incidentId ? `#${incidentId.slice(-6)}` : '#'} • Submitted {incident?.submittedDate ?? '—'}
                   </p>
                   <div className="flex items-center gap-1.5 text-sm text-gray-400 dark:text-gray-500">
                     <Users className="h-4 w-4" />
-                    <span className="font-medium">{upvoteCount} people received this</span>
+                    <span className="font-medium">{incident?.upvotes ?? upvoteCount} people received this</span>
                   </div>
                 </div>
               </CardHeader>
@@ -71,12 +77,7 @@ export function IncidentDetails() {
                 <div className="bg-gray-50 dark:bg-[#12121A] p-4 rounded-lg mb-4">
                   <p className="text-sm font-semibold mb-2 text-gray-900 dark:text-white">Email Content:</p>
                   <div className="font-mono text-sm bg-white dark:bg-[#0A0A0F] p-4 rounded border border-gray-200 dark:border-[#1E1E2E] text-gray-600 dark:text-gray-300">
-                    <p>From: security@paypa1-verify.com</p>
-                    <p>Subject: Urgent - Your PayPal Account Has Been Limited</p>
-                    <p className="mt-4">Dear Valued Customer,</p>
-                    <p className="mt-2">
-                      We have detected unusual activity on your PayPal account...
-                    </p>
+                    <pre className="whitespace-pre-wrap">{incident?.content ?? 'No incident data found (prototype).'}</pre>
                   </div>
                 </div>
 
@@ -162,27 +163,27 @@ export function IncidentDetails() {
               <CardContent className="space-y-4">
                 <div>
                   <p className="text-sm text-gray-400 dark:text-gray-500">Report ID</p>
-                  <p className="font-semibold text-gray-900 dark:text-white">#12345</p>
+                  <p className="font-semibold text-gray-900 dark:text-white">{incidentId ?? '—'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-400 dark:text-gray-500">Submitted By</p>
-                  <p className="font-semibold text-gray-900 dark:text-white">AlertUser123</p>
+                  <p className="font-semibold text-gray-900 dark:text-white">{incident?.submittedBy ?? '—'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-400 dark:text-gray-500">Submission Date</p>
-                  <p className="font-semibold text-gray-900 dark:text-white">Feb 16, 2026</p>
+                  <p className="font-semibold text-gray-900 dark:text-white">{incident?.submittedDate ?? '—'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-400 dark:text-gray-500">Status</p>
-                  <Badge className="bg-green-100 text-green-800 dark:bg-[#1E1E2E] dark:text-green-400">
-                    Verified
+                  <Badge className={incident?.verified ? "bg-green-100 text-green-800 dark:bg-[#1E1E2E] dark:text-green-400" : ""} variant={incident?.verified ? "default" : "secondary"}>
+                    {incident?.verified ? "Verified" : "Under Review"}
                   </Badge>
                 </div>
                 <div>
                   <p className="text-sm text-gray-400 dark:text-gray-500">Upvotes</p>
                   <div className="flex items-center gap-1.5">
                     <Users className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                    <p className="font-semibold text-gray-900 dark:text-white">{upvoteCount} people</p>
+                    <p className="font-semibold text-gray-900 dark:text-white">{incident?.upvotes ?? upvoteCount} people</p>
                   </div>
                 </div>
               </CardContent>

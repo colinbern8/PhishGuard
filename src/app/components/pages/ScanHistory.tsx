@@ -7,6 +7,7 @@ import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { EmptyState } from '../ui/empty-state';
 import { toast } from 'sonner';
+import { useEffect } from 'react';
 
 const mockScanHistory = [
   { id: 1, type: 'Email', date: '2026-02-17', riskLevel: 'High Risk', preview: 'Suspicious PayPal verification email', score: 89 },
@@ -19,11 +20,53 @@ const mockScanHistory = [
 type ScanType = 'All' | 'Email' | 'URL';
 type RiskLevel = 'All' | 'Safe' | 'Suspicious' | 'High Risk';
 
+type StoredScan = {
+  id: string;
+  type: 'email' | 'url';
+  content: string;
+  riskScore: number;
+  verdict: 'safe' | 'suspicious' | 'dangerous';
+  timestamp: string;
+};
+
+const STORAGE_KEY = 'phishguard_scan_history_v1';
+
 export function ScanHistory() {
   const navigate = useNavigate();
   const [scans, setScans] = useState(mockScanHistory);
   const [scanTypeFilter, setScanTypeFilter] = useState<ScanType>('All');
   const [riskLevelFilter, setRiskLevelFilter] = useState<RiskLevel>('All');
+
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') as StoredScan[];
+      if (!Array.isArray(stored) || stored.length === 0) return;
+
+      const mapped = stored.map((s, idx) => {
+        const typeLabel = s.type === 'email' ? 'Email' : 'URL';
+        const riskLevel =
+          s.verdict === 'safe' ? 'Safe' : s.verdict === 'suspicious' ? 'Suspicious' : 'High Risk';
+        const date = new Date(s.timestamp).toISOString().slice(0, 10);
+        const preview =
+          s.type === 'url'
+            ? `${String(s.content).slice(0, 60)}${String(s.content).length > 60 ? '…' : ''}`
+            : `${String(s.content).split('\n')[0]?.slice(0, 60) ?? 'Email scan'}${String(s.content).length > 60 ? '…' : ''}`;
+        return {
+          id: idx + 1,
+          type: typeLabel,
+          date,
+          riskLevel,
+          preview,
+          score: Math.max(0, Math.min(100, Math.round(s.riskScore))),
+          _raw: s,
+        } as any;
+      });
+
+      setScans(mapped);
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
 
   const filteredScans = useMemo(() => {
     return scans.filter(scan => {
@@ -36,13 +79,67 @@ export function ScanHistory() {
   const handleDelete = (id: number) => {
     setScans(prev => prev.filter(scan => scan.id !== id));
     toast('Scan deleted from history');
+
+    // best-effort: also delete from localStorage if this row has raw data
+    try {
+      const row = scans.find((s: any) => s.id === id) as any;
+      const raw: StoredScan | undefined = row?._raw;
+      if (!raw) return;
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') as StoredScan[];
+      const next = (Array.isArray(stored) ? stored : []).filter((s) => s.id !== raw.id);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // ignore
+    }
   };
 
-  const handleExport = () => {
-    toast('Export feature coming soon!');
+  const handleExport = (format: 'csv' | 'json' = 'csv') => {
+    const rows = scans.map((s: any) => ({
+      date: s.date,
+      type: s.type,
+      riskLevel: s.riskLevel,
+      score: s.score,
+      preview: s.preview,
+    }));
+
+    if (format === 'json') {
+      const blob = new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'phishguard-scan-history.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Exported JSON');
+      return;
+    }
+
+    const header = ['date', 'type', 'riskLevel', 'score', 'preview'];
+    const escape = (v: any) => `"${String(v ?? '').replaceAll('"', '""')}"`;
+    const csv = [header.join(','), ...rows.map((r) => header.map((k) => escape((r as any)[k])).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'phishguard-scan-history.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Exported CSV');
   };
 
-  const handleViewDetails = () => {
+  const handleViewDetails = (scan: any) => {
+    const raw: StoredScan | undefined = scan?._raw;
+    if (raw) {
+      navigate('/app/scanner/results', {
+        state: {
+          type: raw.type,
+          content: raw.content,
+          riskScore: raw.riskScore,
+          verdict: raw.verdict,
+        }
+      });
+      return;
+    }
     navigate('/app/scanner/results');
   };
 
@@ -64,14 +161,24 @@ export function ScanHistory() {
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Scan History</h1>
-          <Button 
-            variant="outline" 
-            onClick={handleExport}
-            className="gap-2"
-          >
-            <Download className="h-4 w-4" />
-            Export History
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => handleExport('csv')}
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => handleExport('json')}
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Export JSON
+            </Button>
+          </div>
         </div>
 
         {/* Filter Bar */}
@@ -189,7 +296,7 @@ export function ScanHistory() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={handleViewDetails}
+                        onClick={() => handleViewDetails(scan)}
                         className="gap-2"
                       >
                         <Eye className="h-4 w-4" />

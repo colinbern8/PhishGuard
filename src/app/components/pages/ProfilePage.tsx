@@ -20,12 +20,14 @@ import {
 } from '../ui/alert-dialog';
 import { toast } from 'sonner';
 import { mockCurrentUser, mockAchievements } from '../../lib/mockData';
-import { getCurrentUserProfile, mockLogout } from '../../lib/auth';
+import { getCurrentUserProfile, getCurrentUserRole, mockLogout, setCurrentUserRole, type UserRole } from '../../lib/auth';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 export function ProfilePage() {
   const navigate = useNavigate();
   const earnedAchievements = mockAchievements.filter(a => a.earned);
   const currentUser = getCurrentUserProfile() ?? mockCurrentUser;
+  const [role, setRole] = useState<UserRole>(() => getCurrentUserRole());
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [deleteAccountDialogOpen, setDeleteAccountDialogOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -72,6 +74,12 @@ export function ProfilePage() {
     setTimeout(() => {
       navigate('/');
     }, 2000);
+  };
+
+  const handleRoleChange = (nextRole: UserRole) => {
+    setRole(nextRole);
+    setCurrentUserRole(nextRole);
+    toast.success(`Role switched to ${nextRole}.`);
   };
 
   return (
@@ -201,6 +209,24 @@ export function ProfilePage() {
                     <CardTitle>Account Settings</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    <div>
+                      <Label>Prototype Role</Label>
+                      <p className="text-xs text-gray-500 mt-1">
+                        This is a prototype toggle to access Instructor/Admin use cases (not real RBAC).
+                      </p>
+                      <div className="mt-2">
+                        <Select value={role} onValueChange={(v) => handleRoleChange(v as UserRole)}>
+                          <SelectTrigger className="w-full sm:w-72">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="standard">Standard User</SelectItem>
+                            <SelectItem value="instructor">Instructor / Content Manager</SelectItem>
+                            <SelectItem value="admin">Administrator</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                     <div>
                       <Label htmlFor="username">Username</Label>
                       <Input id="username" defaultValue={currentUser.username} />

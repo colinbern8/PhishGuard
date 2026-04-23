@@ -1,17 +1,25 @@
 import { Link } from 'react-router';
-import { Shield, CheckCircle } from 'lucide-react';
+import { Shield, CheckCircle, ExternalLink } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { useState } from 'react';
+import { requestPasswordReset } from '../../lib/auth';
 
 export function PasswordResetPage() {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [devLink, setDevLink] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const res = requestPasswordReset(email);
+    if (res.ok) {
+      setDevLink(`/reset-password/confirm?token=${encodeURIComponent(res.token)}`);
+    } else {
+      setDevLink(null);
+    }
     setSubmitted(true);
   };
 
@@ -77,6 +85,23 @@ export function PasswordResetPage() {
                 <p className="text-sm text-gray-600">
                   Check your inbox and click the reset link to create a new password.
                 </p>
+
+                {/* Prototype helper: show a clickable link instead of emailing */}
+                {devLink && (
+                  <div className="text-left bg-white/60 rounded-lg border border-white/40 p-4">
+                    <p className="text-xs text-gray-500 mb-2">
+                      Prototype mode: use this link to reset immediately
+                    </p>
+                    <Link
+                      to={devLink}
+                      className="inline-flex items-center gap-2 text-sm text-[#2E75B6] hover:underline break-all"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      {devLink}
+                    </Link>
+                  </div>
+                )}
+
                 <div className="pt-4">
                   <Link to="/login">
                     <Button className="w-full bg-[#1F4E78] hover:bg-[#2E75B6]">

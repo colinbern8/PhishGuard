@@ -1,19 +1,59 @@
-import { useLocation, Link } from 'react-router';
+import { useLocation, Link, useNavigate } from 'react-router';
 import { Shield, AlertTriangle, XCircle, CheckCircle, Link as LinkIcon, Mail, FileText, AlertOctagon } from 'lucide-react';
 import { ApiNotice } from '../ApiNotice';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Button } from '../ui/button';
 import { Progress } from '../ui/progress';
 import { Badge } from '../ui/badge';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog';
+import { Textarea } from '../ui/textarea';
+import { toast } from 'sonner';
 
 export function ScanResults() {
+  const navigate = useNavigate();
   const location = useLocation();
-  const { type, content } = location.state || { type: 'email', content: '' };
+  const state = (location.state ?? null) as
+    | { type?: 'email' | 'url'; content?: string; riskScore?: number; verdict?: 'safe' | 'suspicious' | 'dangerous' }
+    | null;
+
+  const type = state?.type ?? 'email';
+  const content = state?.content ?? '';
 
   // Mock scan results
-  const riskScore = 75; // 0-100
-  const verdict = riskScore < 30 ? 'safe' : riskScore < 70 ? 'suspicious' : 'dangerous';
-  
+  const riskScore = state?.riskScore ?? 75; // 0-100
+  const verdict = state?.verdict ?? (riskScore < 30 ? 'safe' : riskScore < 70 ? 'suspicious' : 'dangerous');
+
+  // Persist to scan history (prototype)
+  useEffect(() => {
+    if (!content) return;
+    const key = 'phishguard_scan_history_v1';
+    const entry = {
+      id: `scan_${Date.now()}`,
+      type,
+      content,
+      riskScore,
+      verdict,
+      timestamp: new Date().toISOString(),
+    };
+    try {
+      const existing = JSON.parse(localStorage.getItem(key) || '[]') as any[];
+      const next = [entry, ...(Array.isArray(existing) ? existing : [])].slice(0, 200);
+      localStorage.setItem(key, JSON.stringify(next));
+    } catch {
+      // ignore storage errors in prototype
+    }
+  }, [content, riskScore, type, verdict]);
+
   const verdictConfig = {
     safe: {
       color: 'text-green-600',
@@ -63,6 +103,33 @@ export function ScanResults() {
     'Report this email to your IT department',
     'Delete this email immediately'
   ];
+
+  // False positive reporting (prototype)
+  const [fpOpen, setFpOpen] = useState(false);
+  const [fpReason, setFpReason] = useState('');
+  const fpKey = 'phishguard_false_positive_reports_v1';
+  const canReportFalsePositive = verdict !== 'safe';
+
+  const submitFalsePositive = () => {
+    const report = {
+      id: `fp_${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      scan: { type, content, riskScore, verdict },
+      reason: fpReason.trim(),
+    };
+    try {
+      const existing = JSON.parse(localStorage.getItem(fpKey) || '[]') as any[];
+      const next = [report, ...(Array.isArray(existing) ? existing : [])].slice(0, 100);
+      localStorage.setItem(fpKey, JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+    setFpOpen(false);
+    setFpReason('');
+    toast.success('Thanks! Your false-positive report was recorded for review.');
+  };
+
+  const canNavigateToReport = useMemo(() => Boolean(content), [content]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -232,12 +299,17 @@ export function ScanResults() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <Link to="/app/report">
-                  <Button className="w-full bg-red-600 hover:bg-red-700">
+                  <Button className="w-full bg-red-600 hover:bg-red-700" disabled={!canNavigateToReport}>
                     <Shield className="mr-2 h-4 w-4" />
                     Report as Phishing
                   </Button>
                 </Link>
-                <Button variant="outline" className="w-full">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  disabled={!canReportFalsePositive}
+                  onClick={() => setFpOpen(true)}
+                >
                   Report False Positive
                 </Button>
                 <Link to="/app/scanner">
@@ -269,6 +341,36 @@ export function ScanResults() {
           </div>
         </div>
       </div>
+
+      <AlertDialog open={fpOpen} onOpenChange={setFpOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Report false positive?</AlertDialogTitle>
+            <AlertDialogDescription>
+              If this scan was flagged incorrectly, send quick feedback so we can improve the prototype rules.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">What went wrong?</p>
+            <Textarea
+              value={fpReason}
+              onChange={(e) => setFpReason(e.target.value)}
+              placeholder="Example: This is a legitimate corporate login link, flagged due to unusual domain."
+              className="min-h-[120px]"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={submitFalsePositive}
+              disabled={fpReason.trim().length < 5}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Submit
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

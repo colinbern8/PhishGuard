@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Clock } from 'lucide-react';
 import { toast } from 'sonner';
+import { mockLogout } from '../../lib/auth';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +45,7 @@ export function SessionTimeoutWarning() {
     }
     setShowWarning(false);
     setCountdown(COUNTDOWN_SECONDS);
+    mockLogout();
     localStorage.removeItem('phishguard_onboarding_complete');
     toast('Your session has expired. Please log in again.');
     navigate('/login');

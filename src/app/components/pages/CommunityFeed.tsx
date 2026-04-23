@@ -5,8 +5,35 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { mockIncidents } from '../../lib/mockData';
+import { useMemo, useState } from 'react';
+import { listIncidentReports } from '../../lib/prototypeStorage';
 
 export function CommunityFeed() {
+  const [showAll, setShowAll] = useState(false);
+
+  const incidents = useMemo(() => {
+    const stored = listIncidentReports()
+      .filter((r) => (showAll ? true : r.verified))
+      .filter((r) => r.status === 'verified' || r.status === 'pending' || r.status === 'rejected')
+      .map((r) => ({
+        id: r.id,
+        type: r.reportType,
+        threatLevel: r.threatLevel,
+        description: r.context?.slice(0, 80) || `Community report (${r.reportType})`,
+        content: r.content,
+        submittedBy: r.submittedBy,
+        submittedDate: r.submittedDate,
+        upvotes: r.upvotes,
+        verified: r.verified,
+        status: r.status === 'verified' ? 'verified' : r.status === 'rejected' ? 'false-report' : 'under-review',
+        tags: r.tags ?? [],
+      }));
+
+    const base = showAll ? mockIncidents : mockIncidents.filter((i) => i.verified);
+    // Prefer showing verified-only first when in verified mode
+    return [...stored, ...base];
+  }, [showAll]);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0A0A0F]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -47,6 +74,14 @@ export function CommunityFeed() {
 
         {/* Filters */}
         <div className="flex gap-4 mb-6">
+          <Button
+            variant={showAll ? "outline" : "default"}
+            onClick={() => setShowAll((v) => !v)}
+            className={showAll ? "" : "bg-green-600 hover:bg-green-700"}
+          >
+            {showAll ? "Showing: All reports" : "Showing: Verified only"}
+          </Button>
+
           <Select defaultValue="all">
             <SelectTrigger className="w-48">
               <SelectValue />
@@ -73,7 +108,7 @@ export function CommunityFeed() {
 
         {/* Feed */}
         <div className="space-y-4">
-          {mockIncidents.map((incident) => {
+          {incidents.map((incident) => {
             const Icon = incident.type === 'email' ? Mail : incident.type === 'url' ? LinkIcon : MessageSquare;
             const threatColor = incident.threatLevel === 'high' ? 'red' : incident.threatLevel === 'medium' ? 'orange' : 'yellow';
 

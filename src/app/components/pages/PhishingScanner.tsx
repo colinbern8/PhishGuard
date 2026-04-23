@@ -78,15 +78,48 @@ export function PhishingScanner() {
     setScanContent(emailContent);
   };
 
+  const handleEmailFileUpload = (file: File | null) => {
+    if (!file) return;
+    // Prototype: best-effort read of .eml/.msg as plain text
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = typeof reader.result === 'string' ? reader.result : '';
+      if (text.trim()) {
+        setEmailContent(text);
+      } else {
+        alert('Unable to read that file. Please paste the email content instead.');
+      }
+    };
+    reader.onerror = () => {
+      alert('Unable to read that file. Please paste the email content instead.');
+    };
+    reader.readAsText(file);
+  };
+
+  function normalizeUrl(input: string): string | null {
+    const raw = input.trim();
+    if (!raw) return null;
+    // Allow users to paste domains without scheme
+    const withScheme = raw.match(/^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//) ? raw : `https://${raw}`;
+    try {
+      // eslint-disable-next-line no-new
+      new URL(withScheme);
+      return withScheme;
+    } catch {
+      return null;
+    }
+  }
+
   const handleScanURL = () => {
-    if (!url.trim()) {
+    const normalized = normalizeUrl(url);
+    if (!normalized) {
       alert('Please enter a URL to scan');
       return;
     }
     setIsAnalyzing(true);
     setAnalysisStep(0);
     setScanType('url');
-    setScanContent(url);
+    setScanContent(normalized);
   };
 
   const exampleEmail = `From: security@paypa1-verify.com
@@ -180,7 +213,13 @@ PayPal Security Team`;
                             </p>
                           </div>
                         </Label>
-                        <Input id="email-file" type="file" accept=".eml,.msg" className="hidden" />
+                        <Input
+                          id="email-file"
+                          type="file"
+                          accept=".eml,.msg"
+                          className="hidden"
+                          onChange={(e) => handleEmailFileUpload(e.target.files?.[0] ?? null)}
+                        />
                       </div>
                     </div>
 

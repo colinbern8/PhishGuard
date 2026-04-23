@@ -4,6 +4,7 @@ import { LandingPage } from "./components/pages/LandingPage";
 import { LoginPage } from "./components/pages/LoginPage";
 import { SignUpPage } from "./components/pages/SignUpPage";
 import { PasswordResetPage } from "./components/pages/PasswordResetPage";
+import { PasswordResetConfirmPage } from "./components/pages/PasswordResetConfirmPage";
 import { Dashboard } from "./components/pages/Dashboard";
 import { ProfilePage } from "./components/pages/ProfilePage";
 import { TrainingCatalog } from "./components/pages/TrainingCatalog";
@@ -33,6 +34,12 @@ import { OnboardingLearningPath } from "./components/pages/onboarding/LearningPa
 import { OnboardingGoals } from "./components/pages/onboarding/Goals";
 import { OnboardingIntroGamification } from "./components/pages/onboarding/IntroGamification";
 import { NotFoundPage } from "./components/pages/NotFoundPage";
+import { AdminGuard } from "./components/pages/admin/AdminGuard";
+import { AdminHome } from "./components/pages/admin/AdminHome";
+import { SimulationsPage } from "./components/pages/admin/SimulationsPage";
+import { AnalyticsPage } from "./components/pages/admin/AnalyticsPage";
+import { ContentManagementPage } from "./components/pages/admin/ContentManagementPage";
+import { IncidentReviewPage } from "./components/pages/admin/IncidentReviewPage";
 
 // OnboardingGuard: redirects already-onboarded users away from onboarding screens
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
@@ -68,6 +75,10 @@ export const router = createBrowserRouter([
   {
     path: "/reset-password",
     element: <PasswordResetPage />,
+  },
+  {
+    path: "/reset-password/confirm",
+    element: <PasswordResetConfirmPage />,
   },
   {
     path: "/onboarding",
@@ -140,6 +151,46 @@ export const router = createBrowserRouter([
       { path: "tools/password", element: <PasswordChecker /> },
       { path: "tools/breach", element: <BreachChecker /> },
       { path: "tools/url-expander", element: <URLExpander /> },
+      {
+        path: "admin",
+        element: (
+          <AdminGuard>
+            <AdminHome />
+          </AdminGuard>
+        ),
+      },
+      {
+        path: "admin/simulations",
+        element: (
+          <AdminGuard>
+            <SimulationsPage />
+          </AdminGuard>
+        ),
+      },
+      {
+        path: "admin/analytics",
+        element: (
+          <AdminGuard>
+            <AnalyticsPage />
+          </AdminGuard>
+        ),
+      },
+      {
+        path: "admin/content",
+        element: (
+          <AdminGuard>
+            <ContentManagementPage />
+          </AdminGuard>
+        ),
+      },
+      {
+        path: "admin/incidents",
+        element: (
+          <AdminGuard>
+            <IncidentReviewPage />
+          </AdminGuard>
+        ),
+      },
       { path: "*", element: <NotFoundPage /> },
     ],
   },

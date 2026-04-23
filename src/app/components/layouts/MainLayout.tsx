@@ -11,7 +11,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import { mockCurrentUser } from '../../lib/mockData';
-import { getCurrentUserProfile, mockLogout } from '../../lib/auth';
+import { getCurrentUserProfile, getCurrentUserRole, mockLogout } from '../../lib/auth';
 import { ThemeToggle } from '../ui/theme-toggle';
 import { StreakRiskBanner } from '../shared/StreakRiskBanner';
 import { SessionTimeoutWarning } from '../shared/SessionTimeoutWarning';
@@ -20,6 +20,7 @@ export function MainLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const currentUser = getCurrentUserProfile() ?? mockCurrentUser;
+  const role = getCurrentUserRole();
 
   const handleLogout = () => {
     mockLogout();
@@ -197,6 +198,14 @@ export function MainLayout() {
                       Leaderboard
                     </Link>
                   </DropdownMenuItem>
+                  {role === 'admin' && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/app/admin" className="cursor-pointer">
+                        <Shield className="mr-2 h-4 w-4" />
+                        Admin Console
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <button onClick={handleLogout} className="cursor-pointer text-red-600">

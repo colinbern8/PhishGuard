@@ -9,6 +9,9 @@ import { Textarea } from '../ui/textarea';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { toast } from 'sonner';
+import { createIncidentReport } from '../../lib/prototypeStorage';
+import { getCurrentUserProfile } from '../../lib/auth';
+import { mockCurrentUser } from '../../lib/mockData';
 
 const ATTACK_TAGS = [
   'Credential Theft',
@@ -42,6 +45,20 @@ export function ReportPhishing() {
     const generatedReportId = '#' + Math.random().toString(36).substring(2, 10).toUpperCase();
     setReportId(generatedReportId);
     setSubmitted(true);
+    const currentUser = getCurrentUserProfile() ?? mockCurrentUser;
+    const date = new Date().toISOString().slice(0, 10);
+    // Store into admin review queue (prototype)
+    createIncidentReport({
+      reportType: reportType as 'email' | 'url' | 'sms',
+      content,
+      context,
+      category,
+      impact: impact ? Number(impact) : null,
+      tags: selectedTags,
+      submittedBy: currentUser.username,
+      submittedDate: date,
+      threatLevel: reportType === 'sms' ? 'medium' : 'high',
+    });
     toast.success("Report submitted! +25 XP earned 🎯");
   };
 
