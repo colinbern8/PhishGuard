@@ -7,6 +7,28 @@ export interface TestUser {
   userId: string;
 }
 
+export interface RegisteredUser {
+  id: string;
+  email: string;
+  username: string;
+  password: string;
+  createdAt: number;
+}
+
+export interface CurrentUserProfile {
+  id: string;
+  email: string;
+  username: string;
+  avatar?: string;
+  memberSince: string;
+  bio?: string;
+  totalPoints: number;
+  rank: number;
+  modulesCompleted: number;
+  badgesEarned: number;
+  currentStreak: number;
+}
+
 // Test users - DO NOT use in production!
 export const testUsers: TestUser[] = [
   {
@@ -21,6 +43,10 @@ export const testUsers: TestUser[] = [
   },
 ];
 
+const AUTH_KEY = 'phishguard_auth';
+const USERS_KEY = 'phishguard_registered_users';
+const PROFILE_KEY = 'phishguard_current_user_profile';
+
 // Log test credentials on load for easy reference
 if (typeof window !== 'undefined') {
   console.log('%c🛡️ PhishGuard Test Credentials', 'color: #28A745; font-size: 16px; font-weight: bold;');
@@ -29,22 +55,128 @@ if (typeof window !== 'undefined') {
   console.log('%cOr use the "Use Test Credentials" button on the login page', 'color: #666; font-size: 12px; font-style: italic;');
 }
 
+function safeParseJson<T>(value: string | null): T | null {
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return null;
+  }
+}
+
+function genId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+  return `u_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+}
+
+function getRegisteredUsers(): RegisteredUser[] {
+  return safeParseJson<RegisteredUser[]>(localStorage.getItem(USERS_KEY)) ?? [];
+}
+
+function setRegisteredUsers(users: RegisteredUser[]) {
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+}
+
+export function mockSignUp(email: string, username: string, password: string): { ok: true } | { ok: false; error: string } {
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedUsername = username.trim();
+  if (!normalizedEmail || !normalizedUsername || !password) {
+    return { ok: false, error: 'Missing required fields' };
+  }
+
+  const users = getRegisteredUsers();
+  const emailTaken =
+    users.some((u) => u.email.toLowerCase() === normalizedEmail) ||
+    testUsers.some((u) => u.email.toLowerCase() === normalizedEmail);
+  if (emailTaken) return { ok: false, error: 'Email is already in use' };
+
+  const newUser: RegisteredUser = {
+    id: genId(),
+    email: normalizedEmail,
+    username: normalizedUsername,
+    password,
+    createdAt: Date.now(),
+  };
+  setRegisteredUsers([newUser, ...users]);
+
+  // Log the newly created user in (separate from test user)
+  localStorage.setItem(
+    AUTH_KEY,
+    JSON.stringify({ userId: newUser.id, email: newUser.email, timestamp: Date.now() })
+  );
+
+  // Provide a lightweight profile the UI can display
+  const profile: CurrentUserProfile = {
+    id: newUser.id,
+    email: newUser.email,
+    username: newUser.username,
+    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(newUser.username)}`,
+    memberSince: new Date().toISOString(),
+    bio: 'New PhishGuard member.',
+    totalPoints: 0,
+    rank: 0,
+    modulesCompleted: 0,
+    badgesEarned: 0,
+    currentStreak: 0,
+  };
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+
+  // Ensure onboarding starts for the new account
+  localStorage.removeItem('phishguard_onboarding_complete');
+
+  return { ok: true };
+}
+
 /**
  * Mock login function
  * In production, this would make an API call to a secure backend
  */
 export function mockLogin(email: string, password: string): boolean {
-  const user = testUsers.find(
-    (u) => u.email === email && u.password === password
+  const normalizedEmail = email.trim().toLowerCase();
+  const testUser = testUsers.find(
+    (u) => u.email.toLowerCase() === normalizedEmail && u.password === password
+  );
+
+  const registeredUser = getRegisteredUsers().find(
+    (u) => u.email.toLowerCase() === normalizedEmail && u.password === password
   );
   
-  if (user) {
+  const authed = testUser
+    ? { userId: testUser.userId, email: testUser.email }
+    : registeredUser
+      ? { userId: registeredUser.id, email: registeredUser.email }
+      : null;
+
+  if (authed) {
     // Store minimal auth state in localStorage (not secure - for demo only!)
-    localStorage.setItem('phishguard_auth', JSON.stringify({
-      userId: user.userId,
-      email: user.email,
+    localStorage.setItem(AUTH_KEY, JSON.stringify({
+      userId: authed.userId,
+      email: authed.email,
       timestamp: Date.now(),
     }));
+
+    // If this is a registered user, also hydrate a display profile
+    if (registeredUser) {
+      const existing = safeParseJson<CurrentUserProfile>(localStorage.getItem(PROFILE_KEY));
+      const profile: CurrentUserProfile = existing && existing.email === registeredUser.email
+        ? existing
+        : {
+            id: registeredUser.id,
+            email: registeredUser.email,
+            username: registeredUser.username,
+            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(registeredUser.username)}`,
+            memberSince: new Date(registeredUser.createdAt).toISOString(),
+            bio: 'New PhishGuard member.',
+            totalPoints: 0,
+            rank: 0,
+            modulesCompleted: 0,
+            badgesEarned: 0,
+            currentStreak: 0,
+          };
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    }
     return true;
   }
   
@@ -55,7 +187,7 @@ export function mockLogin(email: string, password: string): boolean {
  * Check if user is authenticated
  */
 export function isAuthenticated(): boolean {
-  const authData = localStorage.getItem('phishguard_auth');
+  const authData = localStorage.getItem(AUTH_KEY);
   if (!authData) return false;
   
   try {
@@ -72,14 +204,14 @@ export function isAuthenticated(): boolean {
  * Log out the current user
  */
 export function mockLogout(): void {
-  localStorage.removeItem('phishguard_auth');
+  localStorage.removeItem(AUTH_KEY);
 }
 
 /**
  * Get current user auth data
  */
 export function getCurrentAuth() {
-  const authData = localStorage.getItem('phishguard_auth');
+  const authData = localStorage.getItem(AUTH_KEY);
   if (!authData) return null;
   
   try {
@@ -87,4 +219,8 @@ export function getCurrentAuth() {
   } catch {
     return null;
   }
+}
+
+export function getCurrentUserProfile(): CurrentUserProfile | null {
+  return safeParseJson<CurrentUserProfile>(localStorage.getItem(PROFILE_KEY));
 }

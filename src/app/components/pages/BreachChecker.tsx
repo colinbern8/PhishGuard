@@ -10,11 +10,22 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '..
 
 export function BreachChecker() {
   const [email, setEmail] = useState('');
+  const [isChecking, setIsChecking] = useState(false);
   const [checked, setChecked] = useState(false);
   const [breachesFound, setBreachesFound] = useState(true);
 
   const handleCheck = () => {
-    setChecked(true);
+    if (!email.trim()) return;
+
+    setIsChecking(true);
+    setChecked(false);
+
+    // Mock "API" latency; replace with real call later.
+    window.setTimeout(() => {
+      setBreachesFound(true);
+      setIsChecking(false);
+      setChecked(true);
+    }, 1200);
   };
 
   const mockBreaches = [

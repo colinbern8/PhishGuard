@@ -5,6 +5,7 @@ import { Button } from '../ui/button';
 import { Progress } from '../ui/progress';
 import { Badge } from '../ui/badge';
 import { mockCurrentUser, mockModules, mockAchievements } from '../../lib/mockData';
+import { getCurrentUserProfile } from '../../lib/auth';
 import { DuolingoProgressBar } from '../gamification/DuolingoProgressBar';
 import { StreakCalendar } from '../gamification/StreakCalendar';
 import { LeagueCard } from '../gamification/LeagueCard';
@@ -35,6 +36,7 @@ function getBookmarksFromStorage(): { label: string; path: string }[] {
 }
 
 export function Dashboard() {
+  const currentUser = getCurrentUserProfile() ?? mockCurrentUser;
   const bookmarks = getBookmarksFromStorage();
   const activeChallenge = {
     title: 'Scan 20 URLs This Week',
@@ -63,7 +65,7 @@ export function Dashboard() {
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Welcome back, {mockCurrentUser.username}!
+            Welcome back, {currentUser.username}!
           </h1>
           <p className="text-gray-600 dark:text-gray-300 mt-2">Continue your cybersecurity learning journey</p>
         </div>
@@ -73,7 +75,7 @@ export function Dashboard() {
           <DuolingoProgressBar 
             currentXP={35}
             dailyGoal={50}
-            streak={mockCurrentUser.currentStreak}
+            streak={currentUser.currentStreak}
             gems={250}
           />
         </div>
@@ -86,7 +88,7 @@ export function Dashboard() {
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Modules Completed</p>
                   <p className="text-3xl font-bold mt-2 text-gray-900 dark:text-white">
-                    {mockCurrentUser.modulesCompleted}/25
+                    {currentUser.modulesCompleted}/25
                   </p>
                 </div>
                 <div className="w-14 h-14 rounded-2xl bg-blue-500/20 flex items-center justify-center flex-shrink-0">
@@ -95,7 +97,7 @@ export function Dashboard() {
               </div>
               <div className="mt-4">
                 <Progress
-                  value={(mockCurrentUser.modulesCompleted / 25) * 100}
+                  value={(currentUser.modulesCompleted / 25) * 100}
                   className="h-2 bg-gray-200 dark:bg-[#2E2E3E]"
                 />
               </div>
@@ -108,7 +110,7 @@ export function Dashboard() {
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Current Streak</p>
                   <p className="text-3xl font-bold mt-2 text-gray-900 dark:text-white">
-                    {mockCurrentUser.currentStreak} days
+                    {currentUser.currentStreak} days
                   </p>
                 </div>
                 <div className="w-14 h-14 rounded-2xl bg-orange-500/20 flex items-center justify-center flex-shrink-0">
@@ -127,7 +129,7 @@ export function Dashboard() {
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Total Points</p>
                   <p className="text-3xl font-bold mt-2 text-gray-900 dark:text-white">
-                    {mockCurrentUser.totalPoints.toLocaleString()}
+                    {currentUser.totalPoints.toLocaleString()}
                   </p>
                 </div>
                 <div className="w-14 h-14 rounded-2xl bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
@@ -144,7 +146,7 @@ export function Dashboard() {
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Current Rank</p>
                   <p className="text-3xl font-bold mt-2 text-gray-900 dark:text-white">
-                    #{mockCurrentUser.rank}
+                    #{currentUser.rank}
                   </p>
                 </div>
                 <div className="w-14 h-14 rounded-2xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
@@ -385,7 +387,7 @@ export function Dashboard() {
               <CardHeader>
                 <CardTitle className="text-gray-900 dark:text-white">Recent Achievements</CardTitle>
                 <CardDescription className="text-gray-600 dark:text-gray-300">
-                  {mockCurrentUser.badgesEarned} badges earned
+                  {currentUser.badgesEarned} badges earned
                 </CardDescription>
               </CardHeader>
               <CardContent>

@@ -20,11 +20,12 @@ import {
 } from '../ui/alert-dialog';
 import { toast } from 'sonner';
 import { mockCurrentUser, mockAchievements } from '../../lib/mockData';
-import { mockLogout } from '../../lib/auth';
+import { getCurrentUserProfile, mockLogout } from '../../lib/auth';
 
 export function ProfilePage() {
   const navigate = useNavigate();
   const earnedAchievements = mockAchievements.filter(a => a.earned);
+  const currentUser = getCurrentUserProfile() ?? mockCurrentUser;
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [deleteAccountDialogOpen, setDeleteAccountDialogOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -39,7 +40,7 @@ export function ProfilePage() {
   const handleExportData = () => {
     const exportData = {
       exportDate: new Date().toISOString(),
-      profile: { username: mockCurrentUser.username, email: mockCurrentUser.email },
+      profile: { username: currentUser.username, email: currentUser.email },
       progress: JSON.parse(localStorage.getItem('phishguard_progress') || '{}'),
       bookmarks: Object.keys(localStorage).filter(k => k.startsWith('phishguard_bookmark')),
       settings: {
@@ -83,30 +84,30 @@ export function ProfilePage() {
               <CardContent className="pt-6">
                 <div className="text-center">
                   <Avatar className="h-24 w-24 mx-auto mb-4">
-                    <AvatarImage src={mockCurrentUser.avatar} />
-                    <AvatarFallback>{mockCurrentUser.username.slice(0, 2)}</AvatarFallback>
+                    <AvatarImage src={currentUser.avatar} />
+                    <AvatarFallback>{currentUser.username.slice(0, 2)}</AvatarFallback>
                   </Avatar>
-                  <h2 className="font-bold text-xl">{mockCurrentUser.username}</h2>
-                  <p className="text-sm text-gray-600">Member since {new Date(mockCurrentUser.memberSince).toLocaleDateString()}</p>
+                  <h2 className="font-bold text-xl">{currentUser.username}</h2>
+                  <p className="text-sm text-gray-600">Member since {new Date(currentUser.memberSince).toLocaleDateString()}</p>
                   <Button className="mt-4 w-full" size="sm">Edit Profile</Button>
                 </div>
 
                 <div className="mt-6 pt-6 border-t space-y-4">
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Total Points</span>
-                    <span className="font-bold">{mockCurrentUser.totalPoints}</span>
+                    <span className="font-bold">{currentUser.totalPoints}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Rank</span>
-                    <span className="font-bold">#{mockCurrentUser.rank}</span>
+                    <span className="font-bold">#{currentUser.rank}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Modules Completed</span>
-                    <span className="font-bold">{mockCurrentUser.modulesCompleted}</span>
+                    <span className="font-bold">{currentUser.modulesCompleted}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Badges Earned</span>
-                    <span className="font-bold">{mockCurrentUser.badgesEarned}</span>
+                    <span className="font-bold">{currentUser.badgesEarned}</span>
                   </div>
                 </div>
               </CardContent>
@@ -131,11 +132,11 @@ export function ProfilePage() {
                   <CardContent className="space-y-4">
                     <div>
                       <Label>Bio</Label>
-                      <p className="text-sm text-gray-600 mt-1">{mockCurrentUser.bio}</p>
+                      <p className="text-sm text-gray-600 mt-1">{currentUser.bio}</p>
                     </div>
                     <div>
                       <Label>Email</Label>
-                      <p className="text-sm text-gray-600 mt-1">{mockCurrentUser.email}</p>
+                      <p className="text-sm text-gray-600 mt-1">{currentUser.email}</p>
                     </div>
                     <div>
                       <Label>Learning Preferences</Label>
@@ -202,15 +203,15 @@ export function ProfilePage() {
                   <CardContent className="space-y-4">
                     <div>
                       <Label htmlFor="username">Username</Label>
-                      <Input id="username" defaultValue={mockCurrentUser.username} />
+                      <Input id="username" defaultValue={currentUser.username} />
                     </div>
                     <div>
                       <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" defaultValue={mockCurrentUser.email} />
+                      <Input id="email" type="email" defaultValue={currentUser.email} />
                     </div>
                     <div>
                       <Label htmlFor="bio">Bio</Label>
-                      <Textarea id="bio" defaultValue={mockCurrentUser.bio} />
+                      <Textarea id="bio" defaultValue={currentUser.bio} />
                     </div>
                     <Button>Save Changes</Button>
                   </CardContent>

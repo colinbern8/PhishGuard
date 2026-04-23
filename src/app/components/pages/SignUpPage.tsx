@@ -7,6 +7,7 @@ import { Checkbox } from '../ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { ThemeToggle } from '../ui/theme-toggle';
 import { useState } from 'react';
+import { mockSignUp } from '../../lib/auth';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
@@ -61,7 +62,11 @@ export function SignUpPage() {
       alert('Passwords do not match');
       return;
     }
-    // Mock signup - redirect to onboarding flow
+    const res = mockSignUp(email, username, password);
+    if (!res.ok) {
+      alert(res.error);
+      return;
+    }
     navigate('/onboarding');
   };
 

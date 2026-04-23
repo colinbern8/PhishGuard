@@ -4,10 +4,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Badge } from '../ui/badge';
 import { mockLeaderboard, mockCurrentUser } from '../../lib/mockData';
+import { getCurrentUserProfile } from '../../lib/auth';
 
 export function LeaderboardPage() {
   const topThree = mockLeaderboard.slice(0, 3);
   const remaining = mockLeaderboard.slice(3);
+  const currentUser = getCurrentUserProfile() ?? mockCurrentUser;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -66,7 +68,7 @@ export function LeaderboardPage() {
           <CardContent>
             <div className="space-y-2">
               {remaining.map((entry) => {
-                const isCurrentUser = entry.username === mockCurrentUser.username;
+                const isCurrentUser = entry.username === currentUser.username;
                 return (
                   <div
                     key={entry.rank}
@@ -108,11 +110,11 @@ export function LeaderboardPage() {
             <div className="grid md:grid-cols-3 gap-4">
               <div>
                 <p className="text-sm opacity-90">Current Rank</p>
-                <p className="text-2xl font-bold">#{mockCurrentUser.rank}</p>
+                <p className="text-2xl font-bold">#{currentUser.rank}</p>
               </div>
               <div>
                 <p className="text-sm opacity-90">Total Points</p>
-                <p className="text-2xl font-bold">{mockCurrentUser.totalPoints.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{currentUser.totalPoints.toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-sm opacity-90">Points to Next Rank</p>

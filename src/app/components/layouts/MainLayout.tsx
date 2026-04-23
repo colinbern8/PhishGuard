@@ -11,7 +11,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import { mockCurrentUser } from '../../lib/mockData';
-import { mockLogout } from '../../lib/auth';
+import { getCurrentUserProfile, mockLogout } from '../../lib/auth';
 import { ThemeToggle } from '../ui/theme-toggle';
 import { StreakRiskBanner } from '../shared/StreakRiskBanner';
 import { SessionTimeoutWarning } from '../shared/SessionTimeoutWarning';
@@ -19,6 +19,7 @@ import { SessionTimeoutWarning } from '../shared/SessionTimeoutWarning';
 export function MainLayout() {
   const location = useLocation();
   const navigate = useNavigate();
+  const currentUser = getCurrentUserProfile() ?? mockCurrentUser;
 
   const handleLogout = () => {
     mockLogout();
@@ -49,7 +50,7 @@ export function MainLayout() {
       {/* Streak Risk Banner */}
       {showStreakRisk && (
         <StreakRiskBanner 
-          streakDays={mockCurrentUser.currentStreak} 
+          streakDays={currentUser.currentStreak} 
           hoursLeft={hoursLeftInDay}
         />
       )}
@@ -160,16 +161,16 @@ export function MainLayout() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="flex items-center space-x-2">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={mockCurrentUser.avatar} alt={mockCurrentUser.username} />
-                      <AvatarFallback>{mockCurrentUser.username.slice(0, 2)}</AvatarFallback>
+                      <AvatarImage src={currentUser.avatar} alt={currentUser.username} />
+                      <AvatarFallback>{currentUser.username.slice(0, 2)}</AvatarFallback>
                     </Avatar>
-                    <span className="hidden md:block">{mockCurrentUser.username}</span>
+                    <span className="hidden md:block">{currentUser.username}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="px-2 py-2">
-                    <p className="text-sm font-medium">{mockCurrentUser.username}</p>
-                    <p className="text-xs text-gray-500">{mockCurrentUser.email}</p>
+                    <p className="text-sm font-medium">{currentUser.username}</p>
+                    <p className="text-xs text-gray-500">{currentUser.email}</p>
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
